@@ -22,19 +22,20 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Exportar subscription_id para Terraform
-        run: echo "TF_VAR_subscription_id=${{ secrets.ARM_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
-
       - name: Instalar Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Validar Sintaxe e Plano
+        - name: Validar Sintaxe e Plano
         working-directory: infra
+        env:
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         run: |
+          export TF_VAR_subscription_id=$ARM_SUBSCRIPTION_ID
           terraform init
           terraform fmt -check
           terraform validate
           terraform plan -out=tfplan
+      
 
   deploy:
     name: 🚀 Deploy e Configuração
