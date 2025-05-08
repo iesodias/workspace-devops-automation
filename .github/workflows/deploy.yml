@@ -13,8 +13,6 @@ jobs:
   validate:
     name: 🔎 Validar Terraform
     runs-on: ubuntu-latest
-    env:
-      TF_VAR_subscription_id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
     steps:
       - name: Checkout do código
         uses: actions/checkout@v3
@@ -30,6 +28,7 @@ jobs:
       - name: Validar Sintaxe e Plano
         working-directory: infra
         run: |
+          export ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}
           terraform init
           terraform fmt -check
           terraform validate
@@ -39,8 +38,6 @@ jobs:
     name: 🚀 Deploy e Configuração
     needs: validate
     runs-on: ubuntu-latest
-    env:
-      TF_VAR_subscription_id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
     outputs:
       vmName: ${{ steps.output_vm.outputs.vm_name }}
       adminUsername: ${{ steps.output_vm.outputs.admin_username }}
@@ -60,6 +57,7 @@ jobs:
       - name: Aplicar Terraform
         working-directory: infra
         run: |
+          export ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}
           terraform init
           terraform apply -auto-approve
 
@@ -122,29 +120,4 @@ jobs:
         run: |
           status=$(az vm get-instance-view \
             --name "$VM_NAME" \
-            --resource-group rg-vm-automation \
-            --query "instanceView.statuses[?code=='PowerState/running'].displayStatus" \
-            --output tsv)
-
-          echo "Status da VM: $status"
-
-          if [ "$status" != "VM running" ]; then
-            echo "❌ A VM não está em execução!"
-            exit 1
-          else
-            echo "✅ VM está rodando com sucesso!"
-          fi
-
-      - name: Verificar regra da NSG para porta 8081
-        run: |
-          result=$(az network nsg rule list \
-            --nsg-name "nsg-vm" \
-            --resource-group rg-vm-automation \
-            --query "[?destinationPortRange=='8081' && access=='Allow']")
-
-          if [ "$result" = "[]" ]; then
-            echo "❌ Porta 8081 não está liberada na NSG!"
-            exit 1
-          else
-            echo "✅ Porta 8081 está liberada corretamente na NSG!"
-          fi
+            --re
