@@ -67,12 +67,12 @@ resource "azurerm_network_interface_security_group_association" "nsg_assoc" {
 }
 
 resource "azurerm_linux_virtual_machine" "vm" {
-  name                = "vm-automation"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  size                = "Standard_B1s"
-  admin_username      = "azureuser"
-  admin_password      = var.admin_password
+  name                            = "vm-automation"
+  resource_group_name             = azurerm_resource_group.rg.name
+  location                        = azurerm_resource_group.rg.location
+  size                            = "Standard_B1s"
+  admin_username                  = "azureuser"
+  admin_password                  = var.admin_password
   disable_password_authentication = false
 
   network_interface_ids = [
