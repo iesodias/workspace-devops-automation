@@ -42,6 +42,8 @@ jobs:
       vmName: ${{ steps.output_vm.outputs.vm_name }}
       adminUsername: ${{ steps.output_vm.outputs.admin_username }}
       publicIP: ${{ steps.output_vm.outputs.public_ip }}
+      nsgName: ${{ steps.output_vm.outputs.nsg_name }}
+      resourceGroup: ${{ steps.output_vm.outputs.resource_group }}
     steps:
       - name: Checkout do código
         uses: actions/checkout@v3
@@ -67,8 +69,9 @@ jobs:
         run: |
           echo "vm_name=vm-automation" >> $GITHUB_OUTPUT
           echo "admin_username=azureuser" >> $GITHUB_OUTPUT
-          ip=$(terraform output -raw public_ip_address)
-          echo "public_ip=$ip" >> $GITHUB_OUTPUT
+          echo "public_ip=$(terraform output -raw public_ip_address)" >> $GITHUB_OUTPUT
+          echo "nsg_name=$(terraform output -raw nsg_name)" >> $GITHUB_OUTPUT
+          echo "resource_group=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
 
       - name: Definir Variáveis de Ambiente
         run: |
@@ -98,6 +101,8 @@ jobs:
     env:
       PUBLIC_IP: ${{ needs.deploy.outputs.publicIP }}
       VM_NAME: ${{ needs.deploy.outputs.vmName }}
+      NSG_NAME: ${{ needs.deploy.outputs.nsgName }}
+      RESOURCE_GROUP: ${{ needs.deploy.outputs.resourceGroup }}
     steps:
       - name: Login no Azure
         uses: azure/login@v2
@@ -118,10 +123,11 @@ jobs:
 
       - name: Verificar status da VM
         run: |
-          result=$(az network nsg rule list \
-            --nsg-name "$VM_NAME-nsg" \
-            --resource-group rg-vm-automation \
-            --query "[?destinationPortRange=='8081' && access=='Allow']")
+          status=$(az vm get-instance-view \
+            --name "$VM_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "instanceView.statuses[?code=='PowerState/running'].displayStatus" \
+            --output tsv)
 
           echo "Status da VM: $status"
 
@@ -131,17 +137,17 @@ jobs:
           else
               echo "✅ VM está rodando com sucesso!"
           fi
-  
+
       - name: Verificar regra da NSG para porta 8081
         run: |
           result=$(az network nsg rule list \
-          --nsg-name "$VM_NAME-nsg" \
-          --resource-group rg-vm-automation \
-          --query "[?destinationPortRange=='8081' && access=='Allow']")
+            --nsg-name "$NSG_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?destinationPortRange=='8081' && access=='Allow']")
 
           if [ "$result" = "[]" ]; then
-          echo "❌ Porta 8081 não está liberada na NSG!"
-          exit 1
+            echo "❌ Porta 8081 não está liberada na NSG!"
+            exit 1
           else
-          echo "✅ Porta 8081 está liberada corretamente na NSG!"
+            echo "✅ Porta 8081 está liberada corretamente na NSG!"
           fi
