@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      destroy:
+        description: 'Destruir infraestrutura?'
+        required: false
+        default: 'false'
 
 permissions:
   id-token: write
@@ -39,7 +45,7 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     env:
-      DESTROY_INFRA: 'true'  
+      DESTROY_INFRA: 'false'
     outputs:
       vmName: ${{ steps.output_vm.outputs.vm_name }}
       adminUsername: ${{ steps.output_vm.outputs.admin_username }}
@@ -95,13 +101,6 @@ jobs:
       - name: Executar Playbook Ansible
         run: |
           ansible-playbook -i inventory ansible/playbook.yml --extra-vars "ansible_sudo_pass=${{ secrets.ADMIN_PASSWORD }}"
-
-      - name: Destruir infraestrutura
-        if: env.DESTROY_INFRA == 'true'
-        run: |
-          export ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}
-          cd infra
-          terraform destroy -auto-approve
 
   post-tests:
     name: ✅ Pós-Testes de Infra
@@ -160,3 +159,27 @@ jobs:
           else
             echo "✅ Porta 8081 está liberada corretamente na NSG!"
           fi
+
+  destroy:
+    name: 🧨 Destruir Infraestrutura
+    if: ${{ github.event.inputs.destroy == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Login no Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Instalar Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Executar Terraform Destroy
+        working-directory: infra
+        run: |
+          terraform init
+          terraform destroy -auto-approve
