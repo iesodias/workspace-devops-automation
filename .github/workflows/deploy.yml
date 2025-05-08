@@ -99,6 +99,7 @@ jobs:
       - name: Destruir infraestrutura
         if: env.DESTROY_INFRA == 'true'
         run: |
+          export ARM_SUBSCRIPTION_ID=${{ secrets.ARM_SUBSCRIPTION_ID }}
           cd infra
           terraform destroy -auto-approve
 
