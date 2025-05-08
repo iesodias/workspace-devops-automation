@@ -120,7 +120,7 @@ jobs:
         run: |
           result=$(az network nsg rule list \
             --nsg-name "$VM_NAME-nsg" \
-            --resource-group bicep-rg \
+            --resource-group rg-vm-automation \
             --query "[?destinationPortRange=='8081' && access=='Allow']")
 
           echo "Status da VM: $status"
