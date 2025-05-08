@@ -13,6 +13,8 @@ jobs:
   validate:
     name: 🔎 Validar Terraform
     runs-on: ubuntu-latest
+    env:
+      TF_VAR_subscription_id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
     steps:
       - name: Checkout do código
         uses: actions/checkout@v3
@@ -27,20 +29,18 @@ jobs:
 
       - name: Validar Sintaxe e Plano
         working-directory: infra
-        env:
-            ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
         run: |
-            export TF_VAR_subscription_id=$ARM_SUBSCRIPTION_ID
-            terraform init
-            terraform fmt -check
-            terraform validate
-            terraform plan -out=tfplan
-      
+          terraform init
+          terraform fmt -check
+          terraform validate
+          terraform plan -out=tfplan
 
   deploy:
     name: 🚀 Deploy e Configuração
     needs: validate
     runs-on: ubuntu-latest
+    env:
+      TF_VAR_subscription_id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
     outputs:
       vmName: ${{ steps.output_vm.outputs.vm_name }}
       adminUsername: ${{ steps.output_vm.outputs.admin_username }}
@@ -53,9 +53,6 @@ jobs:
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Exportar subscription_id para Terraform
-        run: echo "TF_VAR_subscription_id=${{ secrets.ARM_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
 
       - name: Instalar Terraform
         uses: hashicorp/setup-terraform@v3
