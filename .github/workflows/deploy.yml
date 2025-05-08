@@ -1,14 +1,11 @@
 name: Deploy Terraform to Azure
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       destroy:
         description: 'Destruir infraestrutura?'
-        required: false
+        required: true
         default: 'false'
 
 permissions:
@@ -17,6 +14,7 @@ permissions:
 
 jobs:
   validate:
+    if: ${{ github.event.inputs.destroy == 'false' }}
     name: 🔎 Validar Terraform
     runs-on: ubuntu-latest
     steps:
@@ -41,11 +39,10 @@ jobs:
           terraform plan -out=tfplan
 
   deploy:
+    if: ${{ github.event.inputs.destroy == 'false' }}
     name: 🚀 Deploy e Configuração
     needs: validate
     runs-on: ubuntu-latest
-    env:
-      DESTROY_INFRA: 'false'
     outputs:
       vmName: ${{ steps.output_vm.outputs.vm_name }}
       adminUsername: ${{ steps.output_vm.outputs.admin_username }}
@@ -103,6 +100,7 @@ jobs:
           ansible-playbook -i inventory ansible/playbook.yml --extra-vars "ansible_sudo_pass=${{ secrets.ADMIN_PASSWORD }}"
 
   post-tests:
+    if: ${{ github.event.inputs.destroy == 'false' }}
     name: ✅ Pós-Testes de Infra
     needs: deploy
     runs-on: ubuntu-latest
@@ -161,8 +159,8 @@ jobs:
           fi
 
   destroy:
-    name: 🧨 Destruir Infraestrutura
     if: ${{ github.event.inputs.destroy == 'true' }}
+    name: 🧨 Destruir Infraestrutura
     runs-on: ubuntu-latest
     env:
       ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
