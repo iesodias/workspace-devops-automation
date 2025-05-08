@@ -38,6 +38,8 @@ jobs:
     name: 🚀 Deploy e Configuração
     needs: validate
     runs-on: ubuntu-latest
+    env:
+      DESTROY_INFRA: 'true'  
     outputs:
       vmName: ${{ steps.output_vm.outputs.vm_name }}
       adminUsername: ${{ steps.output_vm.outputs.admin_username }}
@@ -93,6 +95,12 @@ jobs:
       - name: Executar Playbook Ansible
         run: |
           ansible-playbook -i inventory ansible/playbook.yml --extra-vars "ansible_sudo_pass=${{ secrets.ADMIN_PASSWORD }}"
+
+      - name: Destruir infraestrutura
+        if: env.DESTROY_INFRA == 'true'
+        run: |
+          cd infra
+          terraform destroy -auto-approve
 
   post-tests:
     name: ✅ Pós-Testes de Infra
